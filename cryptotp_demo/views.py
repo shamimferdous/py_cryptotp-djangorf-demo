@@ -5,7 +5,7 @@ from .utils import send_otp_to_user, send_reset_password_email, activate_user_ac
 
 # creating new cryptotp object
 from py_cryptotp import Cryptotp
-cryototp = Cryptotp(otp_length=6, otp_duration=2, key='xxxxxxxxxxxxxxxx')
+cryototp = Cryptotp(key='16DigitSecretKey')
 
 
 # send otp endpoint
@@ -13,8 +13,10 @@ cryototp = Cryptotp(otp_length=6, otp_duration=2, key='xxxxxxxxxxxxxxxx')
 def send_otp(request):
 
     # generaing a new otp
-    otp = cryototp.generate()
+    otp = cryototp.generate(otp_length=5, otp_duration=2)
+    # this is the raw otp eg: 12345 which will be sent to user
     raw_otp = otp.get('raw_otp')
+    # this is the hashed_otp eg: lP0zUnCyI1SxUgw with expiration timestamp which will be sent to client as response
     hashed_otp = otp.get('hashed_otp')
 
     # send the raw_otp to user via SMS/Email
@@ -22,7 +24,10 @@ def send_otp(request):
     send_otp_to_user(phone_number=phone_number, otp=raw_otp)
 
     # return the hashed_otp to client
-    return Response(hashed_otp, HTTP_200_OK)
+    payload = {
+        "hashed_otp": hashed_otp
+    }
+    return Response(payload, HTTP_200_OK)
 
 
 # verify otp endpoint
@@ -39,6 +44,6 @@ def verify_otp(request):
         send_reset_password_email()
         activate_user_account()
     else:
-        return Response("OTP doesn't match", HTTP_406_NOT_ACCEPTABLE)
+        return Response("OTP doesn't match or expired!", HTTP_406_NOT_ACCEPTABLE)
 
     return Response(HTTP_200_OK)
